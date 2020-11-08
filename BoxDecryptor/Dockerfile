@@ -3,7 +3,7 @@
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim AS base
 WORKDIR /app
 EXPOSE 80
-EXPOSE 443
+#EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 WORKDIR /src
@@ -17,6 +17,10 @@ FROM build AS publish
 RUN dotnet publish "BoxDecryptor.csproj" -c Release -o /app/publish
 
 FROM base AS final
+ENV INPUT_DIR=/volume1/manuel/Backup/OneDrive/Dokumente_encrypted
+ENV OUTPUT_DIR=/volume1/manuel/Backup/OneDrive_decrypted/Dokumente
+ENV KEY_PATH=/volume1/manuel/Backup/OneDrive_decrypted/manuel.bckey
+ENV PW=NONE
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "BoxDecryptor.dll"]
