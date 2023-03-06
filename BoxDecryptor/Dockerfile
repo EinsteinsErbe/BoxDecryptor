@@ -17,10 +17,10 @@ FROM build AS publish
 RUN dotnet publish "BoxDecryptor.csproj" -c Release -o /app/publish
 
 FROM base AS final
-ENV INPUT_DIR=/volume1/manuel/Backup/OneDrive/Dokumente_encrypted
-ENV OUTPUT_DIR=/volume1/manuel/Backup/OneDrive_decrypted/Dokumente
+ENV INPUT_DIR=/volume1/manuel/Backup/OneDrive/DokumenteEncrypted
+ENV OUTPUT_DIR=/volume1/manuel/Backup/OneDrive_decrypted/DokumenteNew
 ENV KEY_PATH=/volume1/manuel/Backup/OneDrive_decrypted/manuel.bckey
 ENV PW=NONE
-WORKDIR /app
+WORKDIR /
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "BoxDecryptor.dll"]

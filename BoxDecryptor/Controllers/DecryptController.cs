@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BCFileDecryptorCore;
+using CryptomatorTools.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -14,17 +15,22 @@ namespace BoxDecryptor.Controllers
     [Route("[controller]")]
     public class DecryptController : ControllerBase
     {
-        static BCFileDecryptor decryptor;
+        //static BCFileDecryptor decryptor;
+        static CryptomatorHelper cryptomatorHelper;
         public static Stopwatch sw;
         public static bool busy;
+        public static bool success = false;
+        public static string inputDir;
 
         public DecryptController() : base()
         {
-            if (decryptor == null)
+            if (cryptomatorHelper == null)
             {
                 string pw = Environment.GetEnvironmentVariable("PW");
                 string keyFilePath = Environment.GetEnvironmentVariable("KEY_PATH");
-                decryptor = new BCFileDecryptor(keyFilePath, pw);
+                inputDir = Environment.GetEnvironmentVariable("INPUT_DIR");
+                //decryptor = new BCFileDecryptor(keyFilePath, pw);
+                cryptomatorHelper = CryptomatorHelper.Create(pw, inputDir);
             }
 
             if (sw == null)
@@ -38,36 +44,51 @@ namespace BoxDecryptor.Controllers
         [Route("info")]
         public string GetInfo()
         {
-            return busy ? sw.Elapsed.TotalSeconds.ToString("N2") + "s [" + decryptor.currentDir + "]" : "idle" + Environment.NewLine;
+            return busy ? sw.Elapsed.TotalSeconds.ToString("N2") + "s" : (success ? "success" : "ERROR") + Environment.NewLine;
         }
 
         [HttpGet]
         [Route("process")]
         public string Decrypt()
         {
-            if (!decryptor.ready)
-            {
-                return "Decryptor not ready" + Environment.NewLine;
-            }
             if (busy)
             {
                 return GetInfo();
             }
             busy = true;
-
+            success = false;
             //Start Decryption    
-            string inputDir = Environment.GetEnvironmentVariable("INPUT_DIR");
-            string outputDir = Environment.GetEnvironmentVariable("OUTPUT_DIR");
 
+            string outputDir = Environment.GetEnvironmentVariable("OUTPUT_DIR");
+            Console.WriteLine("Decrypt folder: " + inputDir);
             Task.Run(() =>
             {
-                sw.Reset();
-                sw.Start();
-                decryptor.currentDir = "deleting";
-                Directory.Delete(outputDir, true);
-                decryptor.DecryptDir(inputDir, outputDir);
-                busy = false;
-                sw.Stop();
+                try
+                {
+                    sw.Reset();
+                    sw.Start();
+                    //decryptor.currentDir = "deleting";
+                    if (Directory.Exists(outputDir))
+                    {
+                        Console.WriteLine("Delete folder: " + outputDir);
+                        Directory.Delete(outputDir, true);
+                    }
+                    //decryptor.DecryptDir(inputDir, outputDir);
+                    Console.WriteLine("Start decryption");
+                    cryptomatorHelper.DecryptFolder("", outputDir);
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Decryption ERROR: " + e.Message + Environment.NewLine + e.StackTrace);
+                }
+                finally
+                {
+                    busy = false;
+                    sw.Stop();
+                    Console.WriteLine("End decryption");
+                }
+
             });
 
             return "Decryption started" + Environment.NewLine;
