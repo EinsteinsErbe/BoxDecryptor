@@ -1,17 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using System.IO;
-using System.Diagnostics;
-using System.Security.Cryptography;
-
-using Newtonsoft.Json;
-using Miscreant;
-using RFC3394;
+﻿using CryptomatorTools.Helpers;
 using CryptSharp.Utility;
-using CryptomatorTools.Helpers;
+using Miscreant;
+using Newtonsoft.Json;
+using RFC3394;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 
 
 public class V7CryptomatorHelper : CryptomatorHelper
@@ -305,16 +303,25 @@ public class V7CryptomatorHelper : CryptomatorHelper
     private string DecryptFileName(string fullFileName, string parentDirId)
     {
         string Base64EncryptedName = Path.GetFileName(fullFileName);
+        try
+        {
+            if (Base64EncryptedName.EndsWith(".c9s"))
+                Base64EncryptedName = GetEncryptedLongFilename(fullFileName);
 
-        if (Base64EncryptedName.EndsWith(".c9s"))
-            Base64EncryptedName = GetEncryptedLongFilename(fullFileName);
+            if (Base64EncryptedName.EndsWith(".c9r"))
+                Base64EncryptedName = Base64EncryptedName.Substring(0, Base64EncryptedName.Length - 4);
 
-        if (Base64EncryptedName.EndsWith(".c9r"))
-            Base64EncryptedName = Base64EncryptedName.Substring(0, Base64EncryptedName.Length - 4);
-
-        byte[] encryptedName = Base64UrlSafeEncoding.ToBytes(Base64EncryptedName);
-        byte[] plaintextName = siv.Open(encryptedName, null, Encoding.UTF8.GetBytes(parentDirId));
-        return Encoding.UTF8.GetString(plaintextName);
+            byte[] encryptedName = Base64UrlSafeEncoding.ToBytes(Base64EncryptedName);
+            byte[] plaintextName = siv.Open(encryptedName, null, Encoding.UTF8.GetBytes(parentDirId));
+            return Encoding.UTF8.GetString(plaintextName);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to decrypt filename {fullFileName} ({Base64EncryptedName}) from dir {parentDirId}");
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
+            return Path.GetFileName(fullFileName);
+        }
     }
 
     private string GetEncryptedLongFilename(string fullFileName)
